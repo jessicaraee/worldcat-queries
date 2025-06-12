@@ -1,2 +1,5 @@
-# worldcat-queries
-Basic Python scripts for querying the WorldCat API.
+# WorldCat Queries
+A collection of processes used to harvest metadata from the WorldCat API. WorldCat WSKey and secret key are required. More will be added as they are developed and refined.
+
+### OCLC to LC
+This script is used to find LC classification data by OCLC number. OCLC numbers file must be in xlsx format.
