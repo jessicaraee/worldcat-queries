@@ -68,7 +68,7 @@ def get_oclc_numbers(isbn, token):
         oclc_numbers.append({"ISBN": isbn, "OCLC_NUMBER": oclc_number})
 
         print(f"{isbn}, {result}")
-        time.sleep(0.2)  # Respectful throttling
+        time.sleep(0.2)
 
     oclc_numbers = pd.DataFrame(oclc_numbers)
 
