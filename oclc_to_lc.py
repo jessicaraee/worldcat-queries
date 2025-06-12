@@ -73,7 +73,7 @@ def main():
         lc_data = result.get('lc', {}).get('mostPopular', 'None')
         subjects_data.append({'OCLC_NUMBER': oclc, 'LC': lc_data})
         print(f"{oclc}, {lc_data}")
-        time.sleep(0.2)  # Respectful throttling
+        time.sleep(0.2)
 
     subjects_df = pd.DataFrame(subjects_data)
 
