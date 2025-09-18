@@ -85,7 +85,7 @@ def main():
             continue
 
         if token.is_expired():
-            print("Token expired, refreshing...")
+            print("Refreshing token!")
             token = get_token()
 
         rows = get_other_editions(oclc_number, token, record_id)
@@ -99,7 +99,7 @@ def main():
     final_df.to_excel(OUTPUT_FILE, index=False)
     print(f"Other editions data exported to {OUTPUT_FILE}.")
 
-    #Optional filter to export separate file with only rows matching results
+    #Optional filter to export separate file with only rows matching parameters, update or comment out as needed
     filtered_df = final_df[final_df['SPECIFIC_FORMAT'] == 'PrintBook']
     if not filtered_df.empty:
         filtered_file = OUTPUT_FILE.replace(".xlsx", "_PrintOnly.xlsx")
