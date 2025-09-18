@@ -9,7 +9,7 @@ import re
 #Configure access token
 WORLDCAT_KEY = 'mykey' #Insert wskey here
 WORLDCAT_SECRET = 'mysecret' #Insert secret key here
-SCOPES = 'myscopes' #Insert scopes here
+SCOPES = 'WorldCatMetadataAPI' #Update scopes as needed
 
 #Configure files
 INPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
@@ -23,7 +23,7 @@ def get_token():
         scopes=SCOPES
     )
 
-#Get LC classification data based on a list of OCLC numbers
+#Get LC data
 def get_classification_bibs(oclc_number, token):
     try:
         url = f'https://metadata.api.oclc.org/worldcat/search/classification-bibs/{oclc_number}'
@@ -40,7 +40,7 @@ def get_classification_bibs(oclc_number, token):
         print(f"[ERROR] Failed to fetch data for OCLC {oclc_number}: {e}")
         return {}
 
-#Clean LC values to remove apostrophes/brackets, normalize spacing, and remove trailing punctuation
+#Clean LC data to remove apostrophes/brackets, normalize spacing, and remove trailing punctuation
 def clean_lc_class(lc_value):
     if not lc_value or lc_value == "None":
         return None
