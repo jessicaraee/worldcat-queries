@@ -9,12 +9,13 @@ import re
 #Configure access token
 WORLDCAT_KEY = 'mykey' #Insert wskey here
 WORLDCAT_SECRET = 'mysecret' #Insert secret key here
-SCOPES = 'wcapi WorldCatMetadataAPI configPlatform'
+SCOPES = 'myscopes' #Insert scopes here
 
 #Configure files
 INPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
 OUTPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
 
+#Generate an access token
 def get_token():
     return WorldcatAccessToken(
         key=WORLDCAT_KEY,
@@ -22,6 +23,7 @@ def get_token():
         scopes=SCOPES
     )
 
+#Get LC classification data based on a list of OCLC numbers
 def get_classification_bibs(oclc_number, token):
     try:
         url = f'https://metadata.api.oclc.org/worldcat/search/classification-bibs/{oclc_number}'
@@ -31,7 +33,6 @@ def get_classification_bibs(oclc_number, token):
         }
         response = requests.get(url, headers=headers)
 
-        # Raise error if request failed
         response.raise_for_status()
         return response.json()
 
@@ -51,10 +52,9 @@ def clean_lc_class(lc_value):
         return lc_value
     return None
 
+#Run query and export results
 def main():
-    #Define INPUT_FILE fields as needed
     oclclist_df = pd.read_excel(INPUT_FILE, dtype={'ISBN': str, 'OCLC_NUMBER': str})
-
     subjects_data = []
 
     token = get_token()
@@ -78,7 +78,8 @@ def main():
     subjects_df = pd.DataFrame(subjects_data)
 
     final_df = oclclist_df.merge(subjects_df, on='OCLC_NUMBER', how='left')
-
+    if 'RECORD_ID' not in final_df.columns:
+        final_df.insert(0, 'RECORD_ID', range(1, len(final_df) + 1))
     final_df.to_excel(OUTPUT_FILE, index=False)
     print(f"Data exported to {OUTPUT_FILE}")
 
