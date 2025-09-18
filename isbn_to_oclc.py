@@ -9,12 +9,13 @@ import re
 #Configure access token
 WORLDCAT_KEY = 'mykey' #Insert wskey here
 WORLDCAT_SECRET = 'mysecret' #Insert secret key here
-SCOPES = 'wcapi WorldCatMetadataAPI configPlatform'
+SCOPES = 'WorldCatMetadataAPI'
 
 #Configure files
 INPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
 OUTPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
 
+#Generate an access token
 def get_token():
     return WorldcatAccessToken(
         key=WORLDCAT_KEY,
@@ -22,6 +23,7 @@ def get_token():
         scopes=SCOPES
     )
 
+#Get OCLC numbers
 def get_oclc_numbers(isbn, token):
     try:
         url = f'https://americas.discovery.api.oclc.org/worldcat/search/v2/brief-bibs'
@@ -44,15 +46,15 @@ def get_oclc_numbers(isbn, token):
         print(f"[ERROR] Failed to fetch data for ISBN {isbn}: {e}")
         return {}
 
-  def main():
-    #Define INPUT_FILE fields as needed
-    isbnlist_df = pd.read_excel(INPUT_FILE, dtype={'TITLE': str, 'ISBN': str})
+#Run query and export results
+def main():
+    isbnlist_df = pd.read_excel(INPUT_FILE, dtype={'publication_title': str, 'online_identifier': str})
 
     oclc_numbers = []
 
     token = get_token()
 
-    for isbn in isbnlist_df['ISBN']:
+    for isbn in isbnlist_df['online_identifier']:
         isbn = str(isbn).strip()
         if not isbn:
             continue
@@ -65,17 +67,18 @@ def get_oclc_numbers(isbn, token):
 
         oclc_number = result if result and result != "None" else "None"
 
-        oclc_numbers.append({"ISBN": isbn, "OCLC_NUMBER": oclc_number})
+        oclc_numbers.append({"online_identifier": isbn, "OCLC_NUMBER": oclc_number})
 
         print(f"{isbn}, {result}")
         time.sleep(0.2)
 
     oclc_numbers = pd.DataFrame(oclc_numbers)
 
-    final_df = isbnlist_df.merge(oclc_numbers, on='ISBN', how='left')
-
+    final_df = isbnlist_df.merge(oclc_numbers, on='online_identifier', how='left')
+    final_df.insert(0, 'RECORD_ID', range(1, len(final_df) + 1))
     final_df.to_excel(OUTPUT_FILE, index=False)
     print(f"Data exported to {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()
+    
