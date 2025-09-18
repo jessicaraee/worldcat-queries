@@ -65,7 +65,7 @@ def main():
             continue
 
         if token.is_expired():
-            print("Token expired, refreshing...")
+            print("Refreshing token!")
             token = get_token()
 
         result = get_classification_bibs(oclc, token)
