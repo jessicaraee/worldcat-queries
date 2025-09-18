@@ -22,14 +22,18 @@ def get_token():
         scopes=SCOPES
     )
 
-#Get institution holdings data
+#Get library holdings data
 def fetch_holdings_data(oclc_number, token, library_symbol):
     try:
+        if isinstance(library_symbol, str):
+            library_symbol = [library_symbol]
+
         url = f'https://americas.discovery.api.oclc.org/worldcat/search/v2/bibs-holdings'
         headers = {
             'Authorization': f'Bearer {token.token_str}',
             'Accept': 'application/json'
         }
+
         params = {
             'oclcNumber': str(oclc_number).strip(),
             'heldBySymbol': ','.join(library_symbol),
@@ -116,7 +120,11 @@ def main():
     oclclist_df = pd.read_excel(INPUT_FILE, dtype={'RECORD_ID': str, 'OCLC_NUMBER': str})
 
     all_results = []
-    library_symbol = 'LIBRARYSYMBOL' #Update to library's OCLC symbol or list of symbols
+    library_symbol = ['LIBRARYSYMBOL'] #Add more symbols as needed, separate with comma
+    
+    if isinstance(library_symbol, str):
+        library_symbol = [library_symbol]
+
     token = get_token()
 
     #Set as True to fetch summary holdings data and harvest TOTAL_HOLDINGS_COUNT
@@ -132,8 +140,7 @@ def main():
             print("Refreshing token!")
             token = get_token()
 
-        holdings_rows = fetch_holdings_data(oclc_number, token, [library_symbol])
-        all_results.extend(holdings_rows)
+        holdings_rows = fetch_holdings_data(oclc_number, token, library_symbol)
 
         if fetch_summary:
             summary_rows = fetch_summary_data(oclc_number, token)
@@ -153,14 +160,14 @@ def main():
     print(f"Data exported to {OUTPUT_FILE}.")
 
     #Optional filter to export separate file with only rows matching parameters, update or comment out as needed
-    library_symbol_str = str(library_symbol)
-    filtered_df = merged_df[merged_df['LIBRARY'].apply(lambda x: library_symbol_str in str(x))]
+    library_symbol_str = '_'.join(library_symbol)
+    filtered_df = merged_df[merged_df['LIBRARY'].apply(lambda x: any(symbol in str(x) for symbol in library_symbol))]
     if not filtered_df.empty:
-        filtered_file = OUTPUT_FILE.replace(".xlsx", f"_{library_symbol_str}Only.xlsx")
+        filtered_file = OUTPUT_FILE.replace(".xlsx", f"_{library_symbol_str}.xlsx")
         filtered_df.to_excel(filtered_file, index=False)
         print(f"Library holdings data exported to {filtered_file}")
     else:
-        print(f"No rows with Library = {library_symbol_str} found.")
+        print(f"No rows matching {library_symbol_str} found.")
 
 if __name__ == "__main__":
     main()
