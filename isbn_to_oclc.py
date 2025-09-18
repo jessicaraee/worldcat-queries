@@ -9,7 +9,7 @@ import re
 #Configure access token
 WORLDCAT_KEY = 'mykey' #Insert wskey here
 WORLDCAT_SECRET = 'mysecret' #Insert secret key here
-SCOPES = 'WorldCatMetadataAPI'
+SCOPES = 'WorldCatMetadataAPI' #Update scopes as needed
 
 #Configure files
 INPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
