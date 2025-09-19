@@ -41,7 +41,7 @@ def get_classification_bibs(oclc_number, token):
         return {}
 
 #Clean LC data to remove apostrophes/brackets, normalize spacing, and remove trailing punctuation
-def clean_lc_class(lc_value):
+def clean_lc_data(lc_value):
     if not lc_value or lc_value == "None":
         return None
     lc_value = lc_value.strip().upper()
