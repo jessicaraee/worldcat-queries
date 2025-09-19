@@ -14,6 +14,9 @@ SCOPES = 'WorldCatMetadataAPI' #Update scopes as needed
 INPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
 OUTPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
 
+#Configure libraries
+LIBRARY_SYMBOLS = ['LIBRARY'] #Update to OCLC symbol, if searching multiple libraries separate by comma
+
 #Generate an access token
 def get_token():
     return WorldcatAccessToken(
@@ -23,11 +26,11 @@ def get_token():
     )
 
 #Get library holdings data
-def fetch_holdings_data(oclc_number, token, library_symbol):
-    try:
-        if isinstance(library_symbol, str):
-            library_symbol = [library_symbol]
+def get_holdings_data(oclc_number, token, library_symbol):
+    if isinstance(library_symbol, str):
+        library_symbol = [library_symbol]
 
+    try:
         url = f'https://americas.discovery.api.oclc.org/worldcat/search/v2/bibs-holdings'
         headers = {
             'Authorization': f'Bearer {token.token_str}',
@@ -79,7 +82,7 @@ def fetch_holdings_data(oclc_number, token, library_symbol):
         }]
 
 #Get summary data of total holdings in OCLC
-def fetch_summary_data(oclc_number, token):
+def get_summary_data(oclc_number, token):
     try:
         url = f'https://americas.discovery.api.oclc.org/worldcat/search/v2/bibs-summary-holdings'
         headers = {
@@ -99,12 +102,12 @@ def fetch_summary_data(oclc_number, token):
             total_holding_count = first_bib_summary['institutionHolding']['totalHoldingCount']
             rows.append({
                 "OCLC_NUMBER": str(oclc_number).strip(),
-                "TOTAL_HOLDINGS_COUNT": total_holding_count
+                "TOTAL_LIBRARIES_HOLDING_ITEM": total_holding_count
             })
         else:
             rows.append({
                 "OCLC_NUMBER": str(oclc_number).strip(),
-                "TOTAL_HOLDINGS_COUNT": 0
+                "TOTAL_LIBRARIES_HOLDING_ITEM": 0
             })
         return rows
 
@@ -112,23 +115,18 @@ def fetch_summary_data(oclc_number, token):
         print(f"[ERROR] {oclc_number}: {e}")
         return [{
             "OCLC_NUMBER": "None",
-            "TOTAL_HOLDINGS_COUNT": 0
+            "TOTAL_LIBRARIES_HOLDING_ITEM": 0
         }]
 
 #Run query and export results
 def main():
     oclclist_df = pd.read_excel(INPUT_FILE, dtype={'RECORD_ID': str, 'OCLC_NUMBER': str})
-
     all_results = []
-    library_symbol = ['LIBRARYSYMBOL'] #Add more symbols as needed, separate with comma
-    
-    if isinstance(library_symbol, str):
-        library_symbol = [library_symbol]
 
     token = get_token()
 
-    #Set as True to fetch summary holdings data and harvest TOTAL_HOLDINGS_COUNT
-    fetch_summary = True
+    #Set as True to fetch summary holdings data and harvest TOTAL_LIBRARIES_HOLDING_ITEM, set as False if not needed
+    get_summary = True
 
     for _, row in oclclist_df.iterrows():
         oclc_number = row['OCLC_NUMBER']
@@ -140,34 +138,33 @@ def main():
             print("Refreshing token!")
             token = get_token()
 
-        holdings_rows = fetch_holdings_data(oclc_number, token, library_symbol)
+        holdings_rows = get_holdings_data(oclc_number, token, LIBRARY_SYMBOLS)
 
-        if fetch_summary:
-            summary_rows = fetch_summary_data(oclc_number, token)
+        if get_summary:
+            summary_rows = get_summary_data(oclc_number, token)
             for summary_row in summary_rows:
                 for holdings_row in holdings_rows:
                     holdings_row.update(summary_row)
 
         all_results.extend(holdings_rows)
-
         print(f"Processed OCLC {oclc_number}")
         time.sleep(0.2)
 
     holdings_df = pd.DataFrame(all_results)
-
     merged_df = pd.merge(oclclist_df, holdings_df, on="OCLC_NUMBER", how="left")
     merged_df.to_excel(OUTPUT_FILE, index=False)
     print(f"Data exported to {OUTPUT_FILE}.")
 
     #Optional filter to export separate file with only rows matching parameters, update or comment out as needed
-    library_symbol_str = '_'.join(library_symbol)
-    filtered_df = merged_df[merged_df['LIBRARY'].apply(lambda x: any(symbol in str(x) for symbol in library_symbol))]
+    library_symbol_str = '_'.join(LIBRARY_SYMBOLS)
+    filtered_df = merged_df[merged_df['LIBRARY'].apply(lambda x: any(symbol in str(x) for symbol in LIBRARY_SYMBOLS))]
     if not filtered_df.empty:
-        filtered_file = OUTPUT_FILE.replace(".xlsx", f"_{library_symbol_str}.xlsx")
+        filtered_file = OUTPUT_FILE.replace(".xlsx", f"_Filtered.xlsx")
         filtered_df.to_excel(filtered_file, index=False)
         print(f"Library holdings data exported to {filtered_file}")
     else:
-        print(f"No rows matching {library_symbol_str} found.")
+        print(f"No rows matching {LIBRARY_SYMBOLS} found.")
 
 if __name__ == "__main__":
     main()
+    
