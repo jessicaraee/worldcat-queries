@@ -1,4 +1,4 @@
-#Use the BookOps WorldCat wrapper to check for holdings based on a designated library (or list of libraries) and a list of OCLC numbers
+#Use the BookOps WorldCat wrapper to check for holdings based on a designated library (or list of libraries), geographic area, or library type and a list of OCLC numbers
 
 import pandas as pd
 import requests
@@ -14,8 +14,14 @@ SCOPES = 'WorldCatMetadataAPI' #Update scopes as needed
 INPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
 OUTPUT_FILE = 'FILENAME.xlsx' #Update to filepath and name
 
-#Configure libraries
-LIBRARY_SYMBOLS = ['LIBRARY'] #Update to OCLC symbol, if searching multiple libraries separate by comma
+#Configure search criteria
+LIBRARY_SYMBOL = ['library'] #Update to OCLC symbol, if searching multiple libraries separate by comma
+STATE = ['state'] #Update to state using ISO 3166-2 subdivisions, example US-CA
+COUNTRY = ['country'] #Update to country using ISO 3166-1 country codes
+LIBRARY_TYPE = ['librarytype'] #Update to library type, options: non-public, public
+
+#Toggle search type
+SEARCH_BY = 'searchtype' #Update to search type, options: country, library_symbol, library_type, state
 
 #Generate an access token
 def get_token():
@@ -26,9 +32,9 @@ def get_token():
     )
 
 #Get library holdings data
-def get_holdings_data(oclc_number, token, library_symbol):
-    if isinstance(library_symbol, str):
-        library_symbol = [library_symbol]
+def get_holdings_data(oclc_number, token, search_value, search_type):
+    if isinstance(search_value, str):
+        search_value = [search_value]
 
     try:
         url = f'https://americas.discovery.api.oclc.org/worldcat/search/v2/bibs-holdings'
@@ -37,22 +43,34 @@ def get_holdings_data(oclc_number, token, library_symbol):
             'Accept': 'application/json'
         }
 
+        #Adjust parameters based on the search type
         params = {
             'oclcNumber': str(oclc_number).strip(),
-            'heldBySymbol': ','.join(library_symbol),
+            'libraryType': 'all',
             'limit': 50
         }
+
+        if search_type == 'library_symbol':
+            params['heldBySymbol'] = ','.join(search_value)
+        elif search_type == 'state':
+            params['heldInState'] = ','.join(search_value)
+        elif search_type == 'country':
+            params['heldInCountry'] = ','.join(search_value)
+
         response = requests.get(url, headers=headers, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
 
         rows = []
-
         number_of_records = data.get("numberOfRecords", 0)
         if number_of_records > 0:
             first_bib = data['briefRecords'][0]
             if 'institutionHolding' in first_bib and 'briefHoldings' in first_bib['institutionHolding']:
                 brief_holdings = first_bib['institutionHolding']['briefHoldings']
+                if LIBRARY_TYPE == 'non-public':
+                    brief_holdings = [
+                        entry for entry in brief_holdings if entry.get('libraryType', '') != 'public'
+                    ]
                 library_symbol = [entry['oclcSymbol'] for entry in brief_holdings if 'oclcSymbol' in entry]
                 rows.append({
                     "OCLC_NUMBER": oclc_number,
@@ -95,7 +113,6 @@ def get_summary_data(oclc_number, token):
         data = response.json()
 
         rows = []
-
         number_of_records = data.get("numberOfRecords", 0)
         if number_of_records > 0:
             first_bib_summary = data['briefRecords'][0]
@@ -125,8 +142,7 @@ def main():
 
     token = get_token()
 
-    #Set as True to fetch summary holdings data and harvest TOTAL_LIBRARIES_HOLDING_ITEM, set as False if not needed
-    get_summary = True
+    get_summary = True #Set as True to fetch summary holdings data and harvest TOTAL_LIBRARIES_HOLDING_ITEM, set as False if not needed
 
     for _, row in oclclist_df.iterrows():
         oclc_number = row['OCLC_NUMBER']
@@ -138,7 +154,16 @@ def main():
             print("Refreshing token!")
             token = get_token()
 
-        holdings_rows = get_holdings_data(oclc_number, token, LIBRARY_SYMBOLS)
+        if SEARCH_BY == 'library_symbol':
+            search_value = LIBRARY_SYMBOL
+        elif SEARCH_BY == 'state':
+            search_value = STATE
+        elif SEARCH_BY == 'country':
+            search_value = COUNTRY
+        else:
+            search_value = []
+
+        holdings_rows = get_holdings_data(oclc_number, token, search_value, SEARCH_BY)
 
         if get_summary:
             summary_rows = get_summary_data(oclc_number, token)
@@ -156,15 +181,13 @@ def main():
     print(f"Data exported to {OUTPUT_FILE}.")
 
     #Optional filter to export separate file with only rows matching parameters, update or comment out as needed
-    library_symbol_str = '_'.join(LIBRARY_SYMBOLS)
-    filtered_df = merged_df[merged_df['LIBRARY'].apply(lambda x: any(symbol in str(x) for symbol in LIBRARY_SYMBOLS))]
-    if not filtered_df.empty:
-        filtered_file = OUTPUT_FILE.replace(".xlsx", f"_Filtered.xlsx")
-        filtered_df.to_excel(filtered_file, index=False)
-        print(f"Library holdings data exported to {filtered_file}")
-    else:
-        print(f"No rows matching {LIBRARY_SYMBOLS} found.")
+    # filtered_df = merged_df[merged_df['LIBRARY'].apply(lambda x: any(symbol in str(x) for symbol in LIBRARY_SYMBOL))]
+    # if not filtered_df.empty:
+    #     filtered_file = OUTPUT_FILE.replace(".xlsx", f"_Filtered.xlsx")
+    #     filtered_df.to_excel(filtered_file, index=False)
+    #     print(f"Library holdings data exported to {filtered_file}")
+    # else:
+    #     print(f"No rows matching query found.")
 
 if __name__ == "__main__":
     main()
-    
