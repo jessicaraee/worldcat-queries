@@ -1,5 +1,5 @@
 # worldcat-queries
-Workflows used to harvest metadata from the WorldCat API using the BookOps-Worldcat Python wrapper. WorldCat WSKey and secret key are required. Input files must be in .xlsx format.
+Workflows used to harvest metadata from the WorldCat API using the [BookOps-Worldcat Python wrapper](https://bookops-cat.github.io/bookops-worldcat/1.2/). WorldCat WSKey and secret key are required. Input files must be in .xlsx format.
 
 ### check_library_holdings.py
 Check for holdings by OCLC number and library OCLC symbol or list of symbols. API documentation: https://developer.api.oclc.org/wcv2#/Member%20General%20Holdings/find-bib-holdings.
